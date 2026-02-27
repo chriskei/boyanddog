@@ -8,81 +8,286 @@
 import SpriteKit
 import GameplayKit
 
-class GameScene: SKScene {
+class GameScene: SKScene, SKPhysicsContactDelegate {
+    private let random = GKARC4RandomSource()
+    private let hud = HudNode()
+    private let dogMovementSpeed : CGFloat = 170
     
-    private var label : SKLabelNode?
-    private var spinnyNode : SKShapeNode?
+    private let walkingActionKey = "action_walking"
+    private let brickTexture = SKTexture(imageNamed: "brick")
+    private let chocolateTexture = SKTexture(imageNamed: "chocolate")
+    private let boneTexture = SKTexture(imageNamed: "bone")
     
-    override func didMove(to view: SKView) {
+    private var lastUpdateTime : TimeInterval = 0
+    private var currentSpawnTime : TimeInterval = 0
+    private var spawnRate : TimeInterval = 0.5
+    private var boy : BoySprite!
+    // private var dog : DogSprite!
+    // private var dogMovingRight : Bool = true
+    private var isGameOver : Bool = false
+    
+    override func sceneDidLoad() {
+        hud.setup(size: size)
+        addChild(hud)
         
-        // Get label node from scene and store it for use later
-        self.label = self.childNode(withName: "//helloLabel") as? SKLabelNode
-        if let label = self.label {
-            label.alpha = 0.0
-            label.run(SKAction.fadeIn(withDuration: 2.0))
-        }
+        self.lastUpdateTime = 0
+        self.physicsWorld.contactDelegate = self
+        self.physicsWorld.gravity = CGVector(dx: 0.0, dy: -2.0)
         
-        // Create shape node to use during mouse interaction
-        let w = (self.size.width + self.size.height) * 0.05
-        self.spinnyNode = SKShapeNode.init(rectOf: CGSize.init(width: w, height: w), cornerRadius: w * 0.3)
+        let background = SKSpriteNode(imageNamed: "background")
+        background.scale(to: CGSize(width: size.width * 1.3, height: size.height))
+        background.position = CGPoint(x: frame.midX, y: frame.midY)
+        background.zPosition = 0
         
-        if let spinnyNode = self.spinnyNode {
-            spinnyNode.lineWidth = 2.5
-            
-            spinnyNode.run(SKAction.repeatForever(SKAction.rotate(byAngle: CGFloat(Double.pi), duration: 1)))
-            spinnyNode.run(SKAction.sequence([SKAction.wait(forDuration: 0.5),
-                                              SKAction.fadeOut(withDuration: 0.5),
-                                              SKAction.removeFromParent()]))
-        }
+        addChild(background)
+        
+        let floorNode = SKShapeNode(rectOf: CGSize(width: size.width, height: 5))
+        floorNode.position = CGPoint(x: size.width / 2, y: 30)
+        floorNode.physicsBody = SKPhysicsBody(edgeFrom: CGPoint(x: -size.width / 2, y: 0), to: CGPoint(x: size.width, y: 0))
+        floorNode.physicsBody?.categoryBitMask = FloorCategory
+        floorNode.physicsBody?.contactTestBitMask = ChocolateCategory | BoneCategory | BrickCategory
+        floorNode.physicsBody?.friction = 0
+        
+        addChild(floorNode)
+        
+        spawnBoy()
+        // spawnDog()
     }
     
-    
-    func touchDown(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.green
-            self.addChild(n)
+    func spawnBoy() {
+        if let currentBoy = boy, children.contains(currentBoy) {
+            boy.removeFromParent()
+            boy.physicsBody = nil
+            boy.removeAllActions()
         }
+        
+        boy = BoySprite.newInstance()
+        boy.position = CGPoint(x: size.width / 2, y: 60)
+        
+        addChild(boy)
     }
     
-    func touchMoved(toPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.blue
-            self.addChild(n)
-        }
+//    func spawnDog() {
+//        if let currentDog = dog, children.contains(currentDog) {
+//            dog.removeFromParent()
+//            dog.physicsBody = nil
+//            dog.removeAllActions()
+//        }
+//        
+//        dog = DogSprite.newInstance()
+//        dog.position = CGPoint(x: size.width / 2 - 40, y: 100)
+//        
+//        addChild(dog)
+//    }
+    
+    func spawnBrick() {
+        let brick = SKSpriteNode(texture: brickTexture)
+         
+        brick.zPosition = 1
+        brick.physicsBody = SKPhysicsBody(texture: brickTexture, size: brick.size)
+        brick.physicsBody?.categoryBitMask = BrickCategory
+        brick.physicsBody?.contactTestBitMask = FloorCategory | BoyCategory | DogCategory
+        
+        let randomPosition = abs(CGFloat(random.nextInt()).truncatingRemainder(dividingBy: size.width))
+        brick.position = CGPoint(x: randomPosition, y: size.height + 50)
+        
+        addChild(brick)
     }
     
-    func touchUp(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
-            n.position = pos
-            n.strokeColor = SKColor.red
-            self.addChild(n)
-        }
+    func spawnChocolate() {
+        let chocolate = SKSpriteNode(texture: chocolateTexture)
+        
+        chocolate.zPosition = 1
+        chocolate.physicsBody = SKPhysicsBody(texture: chocolateTexture, size: chocolate.size)
+        chocolate.physicsBody?.categoryBitMask = ChocolateCategory
+        chocolate.physicsBody?.contactTestBitMask = FloorCategory | BoyCategory
+        
+        let randomPosition = abs(CGFloat(random.nextInt()).truncatingRemainder(dividingBy: size.width))
+        chocolate.position = CGPoint(x: randomPosition, y: size.height + 50)
+        
+        addChild(chocolate)
+    }
+    
+    func spawnBone() {
+        let bone = SKSpriteNode(texture: boneTexture)
+        
+        bone.zPosition = 1
+        bone.physicsBody = SKPhysicsBody(texture: boneTexture, size: bone.size)
+        bone.physicsBody?.categoryBitMask = BoneCategory
+        bone.physicsBody?.contactTestBitMask = FloorCategory | DogCategory
+        
+        let randomPosition = abs(CGFloat(random.nextInt()).truncatingRemainder(dividingBy: size.width))
+        bone.position = CGPoint(x: randomPosition, y: size.height + 50)
+        
+        addChild(bone)
+    }
+    
+    func gameOver() {
+        guard !isGameOver else { return }
+        
+        isGameOver = true
+        physicsWorld.speed = 0
+
+        let overlay = SKNode()
+        overlay.name = "gameOverOverlay"
+        overlay.zPosition = 1000
+        addChild(overlay)
+        
+        let dim = SKShapeNode(rectOf: size)
+        dim.fillColor = .black
+        dim.alpha = 0.6
+        dim.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        overlay.addChild(dim)
+        
+        let scoreLabel = SKLabelNode(fontNamed: FontName)
+        scoreLabel.text = "Score: \(hud.score)"
+        scoreLabel.fontSize = 42
+        scoreLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 + 60)
+        overlay.addChild(scoreLabel)
+        
+        let replayButton = SKLabelNode(fontNamed: FontName)
+        replayButton.text = "Replay"
+        replayButton.name = "replay"
+        replayButton.fontSize = 32
+        replayButton.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        overlay.addChild(replayButton)
+        
+        let menuButton = SKLabelNode(fontNamed: FontName)
+        menuButton.text = "Main Menu"
+        menuButton.name = "menu"
+        menuButton.fontSize = 32
+        menuButton.position = CGPoint(x: size.width / 2, y: size.height / 2 - 60)
+        overlay.addChild(menuButton)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+        
+        if location.y > size.height / 2 {
+            if location.x < size.width / 2 {
+                boy.setBoyMovingRight(newBoyMovingRightValue: false)
+            } else {
+                boy.setBoyMovingRight(newBoyMovingRightValue: true)
+            }
+        } else {
+//            if location.x < size.width / 2 {
+//                dogMovingRight = false
+//            } else {
+//                dogMovingRight = true
+//            }
         }
         
-        for t in touches { self.touchDown(atPoint: t.location(in: self)) }
+        let node = atPoint(location)
+        
+        if node.name == "replay" {
+            let newGame = GameScene(size: size)
+            newGame.scaleMode = scaleMode
+            
+            view?.presentScene(newGame, transition: SKTransition.reveal(with: .down, duration: 0.75))
+        }
+        
+        if node.name == "menu" {
+            let menu = MenuScene(size: size)
+            menu.scaleMode = scaleMode
+            
+            view?.presentScene(menu, transition: SKTransition.reveal(with: .down, duration: 0.75))
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchMoved(toPoint: t.location(in: self)) }
     }
-    
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
-    }
-    
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        for t in touches { self.touchUp(atPoint: t.location(in: self)) }
-    }
-    
     
     override func update(_ currentTime: TimeInterval) {
-        // Called before each frame is rendered
+        if !isGameOver {
+            if (self.lastUpdateTime == 0) {
+                self.lastUpdateTime = currentTime
+            }
+            
+            let dt = currentTime - self.lastUpdateTime
+            self.lastUpdateTime = currentTime
+            
+            currentSpawnTime += dt
+            
+            if currentSpawnTime > spawnRate {
+                currentSpawnTime = 0
+                
+                let randomNumber = Double.random(in: 0...1)
+                randomNumber < 0.30 ? spawnBrick() : randomNumber < 0.60 ? spawnChocolate() : spawnBone()
+            }
+        
+            boy.update(deltaTime: dt)
+            
+            if boy.position.x > size.width + 20 {
+                boy.position.x = 0
+            } else if boy.position.x < -20 {
+                boy.position.x = size.width
+            }
+            
+            hud.addPoint(points: dt)
+            
+//            if dog.position.x > size.width + 20 {
+//                dog.position.x = 0
+//            } else if dog.position.x < -20 {
+//                dog.position.x = size.width
+//            }
+        }
+    }
+    
+    func didBegin(_ contact: SKPhysicsContact) {
+        let bodyA = contact.bodyA
+        let bodyB = contact.bodyB
+        
+        let collision = bodyA.categoryBitMask | bodyB.categoryBitMask
+        
+        // MARK: - Floor hits falling objects (remove them)
+        if collision == FloorCategory | BrickCategory ||
+           collision == FloorCategory | ChocolateCategory ||
+           collision == FloorCategory | BoneCategory {
+            
+            let fallingBody = (bodyA.categoryBitMask == FloorCategory) ? bodyB : bodyA
+            safelyRemove(node: fallingBody.node)
+        }
+        
+        // MARK: - Boy or Dog hits Brick → Game Over
+        if collision == BoyCategory | BrickCategory ||
+           collision == DogCategory | BrickCategory {
+            
+            gameOver()
+        }
+        
+        // MARK: - Boy collects Chocolate
+        if collision == BoyCategory | ChocolateCategory {
+            
+            let chocolateBody = (bodyA.categoryBitMask == ChocolateCategory) ? bodyA : bodyB
+            
+            if safelyRemove(node: chocolateBody.node) {
+                hud.addPoint(points: 10)
+            }
+        }
+        
+        // MARK: - Dog collects Bone
+        if collision == DogCategory | BoneCategory {
+            
+            let boneBody = (bodyA.categoryBitMask == BoneCategory) ? bodyA : bodyB
+            
+            if safelyRemove(node: boneBody.node) {
+                hud.addPoint(points: 10)
+            }
+        }
+    }
+    
+    @discardableResult
+    func safelyRemove(node: SKNode?) -> Bool {
+        guard let node = node else { return false }
+        
+        // If already removed, don't process again
+        guard node.parent != nil else { return false }
+        
+        node.physicsBody = nil
+        node.removeAllActions()
+        node.removeFromParent()
+        
+        return true
     }
 }
