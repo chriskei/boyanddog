@@ -20,19 +20,20 @@ public class BoySprite : SKSpriteNode {
     private var boyMovingRight : Bool = true
     
     public static func newInstance() -> BoySprite {
-        let boySprite = BoySprite(imageNamed: "boy")
+        let boySprite = BoySprite()
         
         boySprite.zPosition = 1
         // Image is size 54x68, but make the physics box a little smaller for leniency
         boySprite.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 44, height: 58))
         boySprite.physicsBody?.categoryBitMask = BoyCategory
-        boySprite.physicsBody?.contactTestBitMask = ChocolateCategory | BrickCategory
+        boySprite.physicsBody?.collisionBitMask = FloorCategory | BrickCategory | ChocolateCategory
+        boySprite.physicsBody?.contactTestBitMask = BrickCategory | ChocolateCategory
         boySprite.physicsBody?.allowsRotation = false
         
         return boySprite
     }
     
-    public func setBoyMovingRight(newBoyMovingRightValue: Bool) {
+    public func setBoyMovingRight(newBoyMovingRightValue : Bool) {
         boyMovingRight = newBoyMovingRightValue
     }
     

@@ -11,7 +11,6 @@ import GameplayKit
 class GameScene: SKScene, SKPhysicsContactDelegate {
     private let random = GKARC4RandomSource()
     private let hud = HudNode()
-    private let dogMovementSpeed : CGFloat = 170
     
     private let walkingActionKey = "action_walking"
     private let brickTexture = SKTexture(imageNamed: "brick")
@@ -22,8 +21,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var currentSpawnTime : TimeInterval = 0
     private var spawnRate : TimeInterval = 0.5
     private var boy : BoySprite!
-    // private var dog : DogSprite!
-    // private var dogMovingRight : Bool = true
+    private var dog : DogSprite!
     private var isGameOver : Bool = false
     
     override func sceneDidLoad() {
@@ -35,7 +33,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         self.physicsWorld.gravity = CGVector(dx: 0.0, dy: -2.0)
         
         let background = SKSpriteNode(imageNamed: "background")
-        background.scale(to: CGSize(width: size.width * 1.3, height: size.height))
+        background.scale(to: CGSize(width: size.width, height: size.height))
         background.position = CGPoint(x: frame.midX, y: frame.midY)
         background.zPosition = 0
         
@@ -51,7 +49,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(floorNode)
         
         spawnBoy()
-        // spawnDog()
+        spawnDog()
     }
     
     func spawnBoy() {
@@ -62,23 +60,23 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         
         boy = BoySprite.newInstance()
-        boy.position = CGPoint(x: size.width / 2, y: 60)
+        boy.position = CGPoint(x: size.width / 2 - 30, y: 60)
         
         addChild(boy)
     }
     
-//    func spawnDog() {
-//        if let currentDog = dog, children.contains(currentDog) {
-//            dog.removeFromParent()
-//            dog.physicsBody = nil
-//            dog.removeAllActions()
-//        }
-//        
-//        dog = DogSprite.newInstance()
-//        dog.position = CGPoint(x: size.width / 2 - 40, y: 100)
-//        
-//        addChild(dog)
-//    }
+    func spawnDog() {
+        if let currentDog = dog, children.contains(currentDog) {
+            dog.removeFromParent()
+            dog.physicsBody = nil
+            dog.removeAllActions()
+        }
+        
+        dog = DogSprite.newInstance()
+        dog.position = CGPoint(x: size.width / 2 + 30, y: 60)
+        
+        addChild(dog)
+    }
     
     func spawnBrick() {
         let brick = SKSpriteNode(texture: brickTexture)
@@ -171,11 +169,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 boy.setBoyMovingRight(newBoyMovingRightValue: true)
             }
         } else {
-//            if location.x < size.width / 2 {
-//                dogMovingRight = false
-//            } else {
-//                dogMovingRight = true
-//            }
+            if location.x < size.width / 2 {
+                dog.setDogMovingRight(newDogMovingRightValue: false)
+            } else {
+                dog.setDogMovingRight(newDogMovingRightValue: true)
+            }
         }
         
         let node = atPoint(location)
@@ -217,20 +215,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             }
         
             boy.update(deltaTime: dt)
+            dog.update(deltaTime: dt)
             
-            if boy.position.x > size.width + 20 {
+            if boy.position.x > size.width + 22 {
                 boy.position.x = 0
-            } else if boy.position.x < -20 {
+            } else if boy.position.x < -22 {
                 boy.position.x = size.width
             }
             
-            hud.addPoint(points: dt)
+            if dog.position.x > size.width + 21 {
+                dog.position.x = 0
+            } else if dog.position.x < -21 {
+                dog.position.x = size.width
+            }
             
-//            if dog.position.x > size.width + 20 {
-//                dog.position.x = 0
-//            } else if dog.position.x < -20 {
-//                dog.position.x = size.width
-//            }
+            hud.addPoint(points: dt)
         }
     }
     
