@@ -133,7 +133,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         let dim = SKShapeNode(rectOf: size)
         dim.fillColor = .black
-        dim.alpha = 0.6
+        dim.alpha = 0.0
         dim.position = CGPoint(x: size.width / 2, y: size.height / 2)
         overlay.addChild(dim)
         

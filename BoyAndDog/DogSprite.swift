@@ -11,7 +11,12 @@ public class DogSprite : SKSpriteNode {
     private let movementSpeed : CGFloat = 220
     private let walkingActionKey = "action_walking"
     private let walkFrames = [
-        SKTexture(imageNamed: "dog")
+        SKTexture(imageNamed: "dog_1"),
+        SKTexture(imageNamed: "dog_2"),
+        SKTexture(imageNamed: "dog_3"),
+        SKTexture(imageNamed: "dog_4"),
+        SKTexture(imageNamed: "dog_5"),
+        SKTexture(imageNamed: "dog_6")
     ]
     
     private var dogMovingRight : Bool = true
@@ -20,8 +25,8 @@ public class DogSprite : SKSpriteNode {
         let dogSprite = DogSprite()
         
         dogSprite.zPosition = 2
-        // Image is size 52x34, but make the physics box a little smaller for leniency
-        dogSprite.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 42, height: 24))
+        // Image is size 52x38, but make the physics box a little smaller for leniency
+        dogSprite.physicsBody = SKPhysicsBody(rectangleOf: CGSize(width: 42, height: 18))
         dogSprite.physicsBody?.categoryBitMask = DogCategory
         dogSprite.physicsBody?.collisionBitMask = FloorCategory | BrickCategory | BoneCategory
         dogSprite.physicsBody?.contactTestBitMask = BrickCategory | BoneCategory
