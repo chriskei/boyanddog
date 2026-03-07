@@ -133,7 +133,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         let dim = SKShapeNode(rectOf: size)
         dim.fillColor = .black
-        dim.alpha = 0.0
+        dim.alpha = 0.6
         dim.position = CGPoint(x: size.width / 2, y: size.height / 2)
         overlay.addChild(dim)
         
@@ -211,7 +211,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 currentSpawnTime = 0
                 
                 let randomNumber = Double.random(in: 0...1)
-                randomNumber < 0.30 ? spawnBrick() : randomNumber < 0.60 ? spawnChocolate() : spawnBone()
+                // randomNumber < 0.30 ? spawnBrick() : randomNumber < 0.60 ? spawnChocolate() : spawnBone()
             }
         
             boy.update(deltaTime: dt)

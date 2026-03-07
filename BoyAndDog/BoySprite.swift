@@ -11,10 +11,10 @@ public class BoySprite : SKSpriteNode {
     private let movementSpeed : CGFloat = 200
     private let walkingActionKey = "action_walking"
     private let walkFrames = [
-        SKTexture(imageNamed: "boy_right"),
-        SKTexture(imageNamed: "boy_right_2"),
-        SKTexture(imageNamed: "boy_left"),
-        SKTexture(imageNamed: "boy_left_2")
+        SKTexture(imageNamed: "boy_1"),
+        SKTexture(imageNamed: "boy_2"),
+        SKTexture(imageNamed: "boy_3"),
+        SKTexture(imageNamed: "boy_4")
     ]
     
     private var boyMovingRight : Bool = true
@@ -40,7 +40,7 @@ public class BoySprite : SKSpriteNode {
     public func update(deltaTime : TimeInterval) {
         if action(forKey: walkingActionKey) == nil {
             let walkingAction = SKAction.repeatForever(
-                SKAction.animate(with: walkFrames, timePerFrame: 0.1, resize: true, restore: true)
+                SKAction.animate(with: walkFrames, timePerFrame: 0.16, resize: true, restore: true)
             )
             
             run(walkingAction, withKey: walkingActionKey)
