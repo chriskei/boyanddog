@@ -9,8 +9,12 @@ import SpriteKit
 import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
+    private let menuLayer = SKNode()
+    private var gameStarted = false
+    private var playWithDog = true
+    
     private let random = GKARC4RandomSource()
-    private let hud = HudNode()
+    private var hud = HudNode()
     
     private let walkingActionKey = "action_walking"
     private let brickTexture = SKTexture(imageNamed: "brick")
@@ -22,12 +26,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     private var spawnRate : TimeInterval = 0.5
     private var boy : BoySprite!
     private var dog : DogSprite!
-    private var isGameOver : Bool = false
+    private var isGameOver = false
     
     override func sceneDidLoad() {
-        hud.setup(size: size)
-        addChild(hud)
-        
         self.lastUpdateTime = 0
         self.physicsWorld.contactDelegate = self
         self.physicsWorld.gravity = CGVector(dx: 0.0, dy: -2.0)
@@ -50,30 +51,109 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         spawnBoy()
         spawnDog()
+        setupMenu()
+    }
+    
+    func setupMenu() {
+        menuLayer.name = "menuLayer"
+        menuLayer.zPosition = 2
+        addChild(menuLayer)
+        
+        let boyLabel = SKLabelNode(fontNamed: FontName)
+        boyLabel.name = "boyButton"
+        boyLabel.text = "BOY"
+        boyLabel.horizontalAlignmentMode = .left
+        boyLabel.fontSize = 40
+        
+        let boyAndDogLabel = SKLabelNode(fontNamed: FontName)
+        boyAndDogLabel.name = "boyAndDogButton"
+        boyAndDogLabel.text = "BOY AND DOG"
+        boyAndDogLabel.horizontalAlignmentMode = .left
+        boyAndDogLabel.fontSize = 40
+        
+        // Determine widest label
+        let maxWidth = max(boyLabel.frame.width, boyAndDogLabel.frame.width)
+
+        // Position so the CENTER of the widest element sits at frame.midX
+        let leftX = frame.midX - maxWidth / 2
+
+        boyLabel.position = CGPoint(x: leftX, y: frame.midY + 50)
+        boyAndDogLabel.position = CGPoint(x: leftX, y: frame.midY)
+
+        menuLayer.addChild(boyLabel)
+        menuLayer.addChild(boyAndDogLabel)
+    }
+    
+    func startGame() {
+        if gameStarted { return }
+
+        isGameOver = false
+        gameStarted = true
+        physicsWorld.speed = 1
+
+        currentSpawnTime = 0
+        lastUpdateTime = 0
+
+        let fade = SKAction.fadeOut(withDuration: 0.4)
+
+        menuLayer.run(fade) {
+            self.safelyRemove(node: self.menuLayer)
+        }
+
+        if let overlay = childNode(withName: "gameOverOverlay") {
+            overlay.run(fade) {
+                self.safelyRemove(node: overlay)
+            }
+        }
+
+        clearGameObjects()
+
+        spawnBoy()
+        
+        if playWithDog {
+            spawnDog()
+        } else {
+            safelyRemove(node: dog)
+        }
+
+        let newHud = HudNode()
+        newHud.setup(size: size)
+        addChild(newHud)
+        hud = newHud
+    }
+    
+    func clearGameObjects() {
+        for node in children {
+            if let body = node.physicsBody {
+                let category = body.categoryBitMask
+                
+                if category == BrickCategory ||
+                   category == ChocolateCategory ||
+                   category == BoneCategory {
+                    safelyRemove(node: node)
+                }
+            }
+        }
     }
     
     func spawnBoy() {
         if let currentBoy = boy, children.contains(currentBoy) {
-            boy.removeFromParent()
-            boy.physicsBody = nil
-            boy.removeAllActions()
+            safelyRemove(node: currentBoy)
         }
         
         boy = BoySprite.newInstance()
-        boy.position = CGPoint(x: size.width / 2 - 30, y: 60)
+        boy.position = CGPoint(x: -100, y: 60)
         
         addChild(boy)
     }
     
     func spawnDog() {
         if let currentDog = dog, children.contains(currentDog) {
-            dog.removeFromParent()
-            dog.physicsBody = nil
-            dog.removeAllActions()
+            safelyRemove(node: currentDog)
         }
         
         dog = DogSprite.newInstance()
-        dog.position = CGPoint(x: size.width / 2 + 30, y: 60)
+        dog.position = CGPoint(x: -100, y: 60)
         
         addChild(dog)
     }
@@ -123,12 +203,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func gameOver() {
         guard !isGameOver else { return }
         
+        gameStarted = false
         isGameOver = true
         physicsWorld.speed = 0
+        
+        safelyRemove(node: hud)
 
         let overlay = SKNode()
         overlay.name = "gameOverOverlay"
-        overlay.zPosition = 1000
+        overlay.zPosition = 2
         addChild(overlay)
         
         let dim = SKShapeNode(rectOf: size)
@@ -140,39 +223,71 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let scoreLabel = SKLabelNode(fontNamed: FontName)
         scoreLabel.text = "Score: \(hud.score)"
         scoreLabel.fontSize = 42
-        scoreLabel.position = CGPoint(x: size.width / 2, y: size.height / 2 + 60)
+        scoreLabel.horizontalAlignmentMode = .left
+        
+        let boyLabel = SKLabelNode(fontNamed: FontName)
+        boyLabel.name = "boyButton"
+        boyLabel.text = "BOY"
+        boyLabel.fontSize = 40
+        boyLabel.horizontalAlignmentMode = .left
+        
+        let boyAndDogLabel = SKLabelNode(fontNamed: FontName)
+        boyAndDogLabel.name = "boyAndDogButton"
+        boyAndDogLabel.text = "BOY AND DOG"
+        boyAndDogLabel.fontSize = 40
+        boyAndDogLabel.horizontalAlignmentMode = .left
+        
+        // Determine widest label
+        let maxWidth = max(scoreLabel.frame.width, boyLabel.frame.width, boyAndDogLabel.frame.width)
+
+        // Position so the CENTER of the widest element sits at frame.midX
+        let leftX = frame.midX - maxWidth / 2
+        
+        scoreLabel.position = CGPoint(x: leftX, y: frame.midY + 50)
+        boyLabel.position = CGPoint(x: leftX, y: frame.midY)
+        boyAndDogLabel.position = CGPoint(x: leftX, y: frame.midY - 50)
+        
         overlay.addChild(scoreLabel)
-        
-        let replayButton = SKLabelNode(fontNamed: FontName)
-        replayButton.text = "Replay"
-        replayButton.name = "replay"
-        replayButton.fontSize = 32
-        replayButton.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        overlay.addChild(replayButton)
-        
-        let menuButton = SKLabelNode(fontNamed: FontName)
-        menuButton.text = "Main Menu"
-        menuButton.name = "menu"
-        menuButton.fontSize = 32
-        menuButton.position = CGPoint(x: size.width / 2, y: size.height / 2 - 60)
-        overlay.addChild(menuButton)
+        overlay.addChild(boyLabel)
+        overlay.addChild(boyAndDogLabel)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         
-        if location.y > size.height / 2 {
+        // Check menu buttons
+        let nodes = nodes(at: location)
+        for node in nodes {
+            if node.name == "boyButton" {
+                playWithDog = false
+                startGame()
+            } else if node.name == "boyAndDogButton" {
+                playWithDog = true
+                startGame()
+            }
+        }
+        
+        // Boy and dog movement
+        if playWithDog {
+            if location.y > size.height / 2 {
+                if location.x < size.width / 2 {
+                    boy.setBoyMovingRight(newBoyMovingRightValue: false)
+                } else {
+                    boy.setBoyMovingRight(newBoyMovingRightValue: true)
+                }
+            } else {
+                if location.x < size.width / 2 {
+                    dog.setDogMovingRight(newDogMovingRightValue: false)
+                } else {
+                    dog.setDogMovingRight(newDogMovingRightValue: true)
+                }
+            }
+        } else {
             if location.x < size.width / 2 {
                 boy.setBoyMovingRight(newBoyMovingRightValue: false)
             } else {
                 boy.setBoyMovingRight(newBoyMovingRightValue: true)
-            }
-        } else {
-            if location.x < size.width / 2 {
-                dog.setDogMovingRight(newDogMovingRightValue: false)
-            } else {
-                dog.setDogMovingRight(newDogMovingRightValue: true)
             }
         }
         
@@ -210,8 +325,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             if currentSpawnTime > spawnRate {
                 currentSpawnTime = 0
                 
-                let randomNumber = Double.random(in: 0...1)
-                // randomNumber < 0.30 ? spawnBrick() : randomNumber < 0.60 ? spawnChocolate() : spawnBone()
+                if gameStarted {
+                    let randomNumber = Double.random(in: 0...1)
+                    
+                    if playWithDog {
+                        randomNumber < 0.80 ? spawnBrick() : randomNumber < 0.90 ? spawnChocolate() : spawnBone()
+                    } else {
+                        randomNumber < 0.90 ? spawnBrick() : spawnChocolate()
+                    }
+                }
             }
         
             boy.update(deltaTime: dt)
@@ -224,9 +346,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             }
             
             if dog.position.x > size.width + 21 {
-                dog.position.x = 0
+                if playWithDog {
+                    dog.position.x = 0
+                } else {
+                    safelyRemove(node: dog)
+                }
             } else if dog.position.x < -21 {
-                dog.position.x = size.width
+                if playWithDog {
+                    dog.position.x = size.width
+                } else {
+                    safelyRemove(node: dog)
+                }
             }
             
             hud.addPoint(points: dt)

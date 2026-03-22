@@ -15,9 +15,14 @@ class HudNode : SKNode {
     private var showingHighScore = false
     
     public func setup(size: CGSize) {
-        let defaults = UserDefaults.standard
+        removeAllChildren()
         
+        let defaults = UserDefaults.standard
         highScore = defaults.integer(forKey: ScoreKey)
+        
+        score = 0
+        effectiveScore = 0
+        showingHighScore = false
         
         scoreNode.text = "\(score)"
         scoreNode.fontSize = 70
@@ -47,6 +52,7 @@ class HudNode : SKNode {
     
     public func resetPoints() {
         score = 0
+        effectiveScore = 0
         updateScoreboard()
         
         if showingHighScore {
